@@ -1,14 +1,3 @@
-# -*- coding: utf-8 -*-
-
-""" Entry for Fooocus API.
-
-Use for starting Fooocus API.
-    python main.py --help for more usage
-
-@file: main.py
-@author: Konie
-@update: 2024-03-22 
-"""
 import argparse
 import os
 import re
@@ -25,7 +14,6 @@ module_path = os.path.join(script_path, "repositories/Fooocus")
 
 sys.path.append(script_path)
 sys.path.append(module_path)
-
 
 logger.std_info("[System ARGV] " + str(sys.argv))
 
@@ -44,6 +32,12 @@ default_command_live = True
 index_url = os.environ.get("INDEX_URL", "")
 re_requirement = re.compile(r"\s*([-_a-zA-Z0-9]+)\s*(?:==\s*([-+_.a-zA-Z0-9]+))?\s*")
 
+def get_runpod_base_url():
+    """Get the RunPod proxy URL from environment variables"""
+    pod_id = os.environ.get('RUNPOD_POD_ID', '')
+    if pod_id:
+        return f"https://{pod_id}-7860.proxy.runpod.net"
+    return None
 
 def install_dependents(skip: bool = False):
     """
@@ -68,12 +62,10 @@ def install_dependents(skip: bool = False):
             desc="torch",
         )
 
-
 def preload_pipeline():
     """Preload pipeline"""
     logger.std_info("[Fooocus-API] Preloading pipeline ...")
     import modules.default_pipeline as _
-
 
 def prepare_environments(args) -> bool:
     """
@@ -81,12 +73,18 @@ def prepare_environments(args) -> bool:
     Args:
         args: command line arguments
     """
+    # Set port and host
+    args.port = 7860
+    args.host = "0.0.0.0"
 
-    if args.base_url is None or len(args.base_url.strip()) == 0:
-        host = args.host
-        if host == "0.0.0.0":
-            host = "127.0.0.1"
-        args.base_url = f"http://{host}:{args.port}"
+    # Check for RunPod environment and set base_url accordingly
+    runpod_url = get_runpod_base_url()
+    if runpod_url:
+        args.base_url = runpod_url
+        logger.std_info(f"[Fooocus-API] Using RunPod base URL: {args.base_url}")
+    else:
+        args.base_url = f"http://{args.host}:{args.port}"
+        logger.std_info(f"[Fooocus-API] Using local base URL: {args.base_url}")
 
     sys.argv = [sys.argv[0]]
 
@@ -136,7 +134,6 @@ def prepare_environments(args) -> bool:
 
     return True
 
-
 def pre_setup():
     """
     Pre setup, for replicate
@@ -145,9 +142,9 @@ def pre_setup():
         """
         Arguments object
         """
-        host = "127.0.0.1"
-        port = 8888
-        base_url = None
+        host = "0.0.0.0"
+        port = 7860
+        base_url = get_runpod_base_url() or None  # Try to get RunPod URL first
         sync_repo = "skip"
         disable_image_log = True
         skip_pip = True
@@ -180,7 +177,6 @@ def pre_setup():
 
     print("[Pre Setup] Finished")
 
-
 if __name__ == "__main__":
     logger.std_info(f"[Fooocus API] Python {sys.version}")
     logger.std_info(f"[Fooocus API] Fooocus API version: {version}")
@@ -212,3 +208,6 @@ if __name__ == "__main__":
         from fooocusapi.api import start_app
 
         start_app(args)
+
+
+
